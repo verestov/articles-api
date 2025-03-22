@@ -1,0 +1,21 @@
+# Binaries
+/app
+*.exe
+*.out
+
+# Go
+bin/
+vendor/
+*.test
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+
+# Docker
+*.env
+.env
