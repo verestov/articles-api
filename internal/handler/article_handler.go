@@ -1,10 +1,9 @@
 package handler
 
 import (
-	"Posts/internal/model"
+	"Posts/internal/dto"
 	"Posts/internal/repository"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -21,52 +20,47 @@ func NewArticleHandler(repo *repository.ArticleRepository) *ArticleHandler {
 
 // GetAll
 func (h *ArticleHandler) GetAllArticlesHandler(w http.ResponseWriter, r *http.Request) {
-	// Получаем параметры из URL
-	title := r.URL.Query().Get("title")
-	author := r.URL.Query().Get("author")
-	tag := r.URL.Query().Get("tag")
-	sort := r.URL.Query().Get("sort")
-
-	// Получаем статьи с фильтрацией и сортировкой
-	articles, err := h.repo.GetFilteredAndSortedArticles(title, author, tag, sort)
+	articles, err := h.repo.GetAllArticles()
 	if err != nil {
 		http.Error(w, "Failed to fetch articles", http.StatusInternalServerError)
 		return
 	}
 
-	// Отправляем результат в формате JSON
-	w.Header().Set("Content-Type", "application/json")
+	var response []dto.ArticleResponseDTO
+	for _, article := range articles {
+		response = append(response, dto.ToArticleResponseDTO(&article))
+	}
+
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(articles)
+	json.NewEncoder(w).Encode(response)
 }
 
 // Create
 func (h *ArticleHandler) CreateArticleHandler(w http.ResponseWriter, r *http.Request) {
-	var article model.Article
+	var articleDTO dto.ArticleRequestDTO
 
-	//Парсим тело запроса
-	if err := json.NewDecoder(r.Body).Decode(&article); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&articleDTO); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	// Сохранение статьи в БД через репозиторий
-	if err := h.repo.CreateArticle(&article); err != nil {
-		log.Println("DB error:", err)
+	article := dto.ToArticleModel(articleDTO)
+
+	if err := h.repo.CreateArticle(article); err != nil {
 		http.Error(w, "Failed to create article", http.StatusInternalServerError)
 		return
 	}
 
-	//Возвращаем ответ
+	responseDTO := dto.ToArticleResponseDTO(article)
+
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(article)
+	json.NewEncoder(w).Encode(responseDTO)
 }
 
 // Get Article by ID
 func (h *ArticleHandler) GetArticleByIDHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)
-
 	if err != nil {
 		http.Error(w, "Invalid ID", http.StatusBadRequest)
 		return
@@ -74,52 +68,53 @@ func (h *ArticleHandler) GetArticleByIDHandler(w http.ResponseWriter, r *http.Re
 
 	article, err := h.repo.GetArticleByID(uint(id))
 	if err != nil {
-		http.Error(w, "Failed to get article", http.StatusInternalServerError)
+		http.Error(w, "Article not found", http.StatusNotFound)
 		return
 	}
 
+	response := dto.ToArticleResponseDTO(article)
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(article)
+	json.NewEncoder(w).Encode(response)
 }
 
 // Update Article
 func (h *ArticleHandler) UpdateArticleHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)
-
 	if err != nil {
 		http.Error(w, "Invalid ID", http.StatusBadRequest)
 		return
 	}
 
-	var updateArticle model.Article
-	if err := json.NewDecoder(r.Body).Decode(&updateArticle); err != nil {
+	var updateDTO dto.ArticleRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&updateDTO); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	updateArticle.ID = uint(id)
+	article := dto.ToArticleModel(updateDTO)
+	article.ID = uint(id)
 
-	if err := h.repo.UpdateArticle(&updateArticle); err != nil {
-		http.Error(w, "Failed to update", http.StatusInternalServerError)
+	if err := h.repo.UpdateArticle(article); err != nil {
+		http.Error(w, "Failed to update article", http.StatusInternalServerError)
 		return
 	}
 
+	response := dto.ToArticleResponseDTO(article)
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(updateArticle)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *ArticleHandler) DeleteArticleHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)
-
 	if err != nil {
-		http.Error(w, "Invalid id", http.StatusBadRequest)
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
 		return
 	}
 
 	if err := h.repo.DeleteArticle(uint(id)); err != nil {
-		http.Error(w, "Failed to delete", http.StatusInternalServerError)
+		http.Error(w, "Failed to delete article", http.StatusInternalServerError)
 		return
 	}
 
