@@ -15,10 +15,10 @@ import (
 var validate = validator.New()
 
 type ArticleHandler struct {
-	repo *repository.ArticleRepository
+	repo repository.ArticleRepositoryInterface
 }
 
-func NewArticleHandler(repo *repository.ArticleRepository) *ArticleHandler {
+func NewArticleHandler(repo repository.ArticleRepositoryInterface) *ArticleHandler {
 	return &ArticleHandler{repo: repo}
 }
 

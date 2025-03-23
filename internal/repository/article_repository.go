@@ -8,6 +8,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// Убедимся, что ArticleRepository реализует ArticleRepositoryInterface
+var _ ArticleRepositoryInterface = (*ArticleRepository)(nil)
+
 type ArticleRepository struct {
 	db *gorm.DB
 }
