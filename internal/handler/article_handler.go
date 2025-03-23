@@ -4,11 +4,15 @@ import (
 	"Posts/internal/dto"
 	"Posts/internal/repository"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi"
+	"github.com/go-playground/validator/v10"
 )
+
+var validate = validator.New()
 
 type ArticleHandler struct {
 	repo *repository.ArticleRepository
@@ -26,7 +30,7 @@ func (h *ArticleHandler) GetAllArticlesHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var response []dto.ArticleResponseDTO
+	var response []*dto.ArticleResponseDTO
 	for _, article := range articles {
 		response = append(response, dto.ToArticleResponseDTO(&article))
 	}
@@ -37,14 +41,18 @@ func (h *ArticleHandler) GetAllArticlesHandler(w http.ResponseWriter, r *http.Re
 
 // Create
 func (h *ArticleHandler) CreateArticleHandler(w http.ResponseWriter, r *http.Request) {
-	var articleDTO dto.ArticleRequestDTO
-
-	if err := json.NewDecoder(r.Body).Decode(&articleDTO); err != nil {
+	var createDTO dto.CreateArticleDTO
+	if err := json.NewDecoder(r.Body).Decode(&createDTO); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	article := dto.ToArticleModel(articleDTO)
+	if err := validate.Struct(createDTO); err != nil {
+		http.Error(w, fmt.Sprintf("Validation error: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	article := createDTO.ToArticleModel()
 
 	if err := h.repo.CreateArticle(article); err != nil {
 		http.Error(w, "Failed to create article", http.StatusInternalServerError)
@@ -86,13 +94,18 @@ func (h *ArticleHandler) UpdateArticleHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	var updateDTO dto.ArticleRequestDTO
+	var updateDTO dto.CreateArticleDTO
 	if err := json.NewDecoder(r.Body).Decode(&updateDTO); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	article := dto.ToArticleModel(updateDTO)
+	if err := validate.Struct(updateDTO); err != nil {
+		http.Error(w, fmt.Sprintf("Validation error: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	article := updateDTO.ToArticleModel()
 	article.ID = uint(id)
 
 	if err := h.repo.UpdateArticle(article); err != nil {
@@ -105,6 +118,7 @@ func (h *ArticleHandler) UpdateArticleHandler(w http.ResponseWriter, r *http.Req
 	json.NewEncoder(w).Encode(response)
 }
 
+// Delete
 func (h *ArticleHandler) DeleteArticleHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)

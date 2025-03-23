@@ -21,7 +21,14 @@ type ArticleResponseDTO struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func ToArticleModel(dto ArticleRequestDTO) *model.Article {
+type CreateArticleDTO struct {
+	Title   string   `json:"title" validate:"required,min=3,max=100"`
+	Content string   `json:"content" validate:"required,min=10"`
+	Author  string   `json:"author" validate:"required"`
+	Tags    []string `json:"tags" validate:"dive,required"`
+}
+
+func (dto *CreateArticleDTO) ToArticleModel() *model.Article {
 	return &model.Article{
 		Title:   dto.Title,
 		Content: dto.Content,
@@ -30,8 +37,8 @@ func ToArticleModel(dto ArticleRequestDTO) *model.Article {
 	}
 }
 
-func ToArticleResponseDTO(article *model.Article) ArticleResponseDTO {
-	return ArticleResponseDTO{
+func ToArticleResponseDTO(article *model.Article) *ArticleResponseDTO {
+	return &ArticleResponseDTO{
 		ID:        article.ID,
 		Title:     article.Title,
 		Content:   article.Content,
