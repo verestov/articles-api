@@ -18,7 +18,7 @@ func SetUpRouter(articleHandler *handler.ArticleHandler) *chi.Mux {
 
 	r.Get("/articles", articleHandler.GetAllArticlesHandler)
 	r.Post("/articles", articleHandler.CreateArticleHandler)
-	r.Get("/articles{id}", articleHandler.GetArticleByIDHandler)
+	r.Get("/articles/{id}", articleHandler.GetArticleByIDHandler)
 	r.Post("/articles/{id}", articleHandler.UpdateArticleHandler)
 	r.Delete("/articles/{id}", articleHandler.DeleteArticleHandler)
 	return r
